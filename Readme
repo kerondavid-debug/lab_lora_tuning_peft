@@ -1,1 +1,59 @@
-tuning
+Lab | LoRA Tuning with PEFT (Hugging Face)
+
+Fine-tunes bigscience/bloom-560m on the databricks/databricks-dolly-15k
+instruction dataset using LoRA (Low-Rank Adaptation) via Hugging Face's
+peft library, then compares base vs. fine-tuned outputs.
+
+What is LoRA
+
+Instead of updating a full weight matrix, LoRA factors the update into two
+small low-rank matrices that are trained instead. Example: a 50x50 matrix
+(2,500 params) can be approximated by a 2x50 and 50x2 pair (200 params) —
+a 92% reduction. On real LLMs this can shrink trainable parameters to
+~0.02% of the full model, with results close to full fine-tuning.
+
+Requirements
+
+
+GPU runtime (Colab: Runtime > Change runtime type > GPU, tested on L4)
+peft==0.8.2, datasets==2.16.1, ipywidgets==7.7.5 (installed in the
+first code cell)
+
+
+Notebook flow
+
+
+Load model & tokenizer — bloom-560m, float32, left padding for
+generation.
+Baseline generation — prompt the un-tuned model to "act like a
+motivational coach" to see pre-fine-tuning behavior.
+Prepare the dataset — load Dolly-15k, format each row as
+### Instruction / ### Context / ### Response, tokenize with
+label-masking (loss computed only on the response), take a 2,000-row
+sample.
+LoRA config — r=8, lora_alpha=16, target_modules=["query_key_value"],
+lora_dropout=0.05, bias="none", task_type="CAUSAL_LM".
+Train — Trainer, 3 epochs, lr=3e-4 (~10–12 min on a Colab GPU).
+Save adapter + tokenizer to ./bloom-dolly-lora.
+Reload & compare — load the adapter with PeftModel, generate on a
+new prompt with the adapter on (loaded_model) vs. off
+(peft_model.disable_adapter()), print both.
+Exercise — a second LoRA run (r=16, lora_alpha=32,
+target_modules=["query_key_value", "dense"]) trained on the same data,
+with a report template comparing trainable-parameter count, training
+loss, and output quality against the first run.
+
+
+Run it
+
+Open in Colab with a GPU runtime and run all cells top to bottom. Each
+section builds on objects created earlier (tokenizer, foundation_model,
+train_sample, peft_model, inputs, get_outputs), so don't skip cells.
+
+Notes
+
+
+get_peft_model() modifies its base model in place — the exercise cell
+reloads a fresh copy of BLOOM so the two LoRA runs are a fair comparison.
+Padding side is "right" during tokenization/training and "left" for
+generation; the notebook switches it back and forth at the right points.
