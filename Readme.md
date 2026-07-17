@@ -100,4 +100,4 @@ output quality between the two runs.
 
 ## License
 
-MIT — adjust as needed for your course/repo.
+MIT — adjust as needed for your repo.
